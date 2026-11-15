@@ -12,8 +12,9 @@ app.use(cors({
     credentials : true 
 }))
 
-import userRouter from "./routes/user.route.js"
-
-app.use("api/v1/users" , userRouter)
+import userRoute from "./routes/user.route.js"
+import messageRoute from "./routes/message.routes.js"
+app.use("api/v1/users" ,userRoute)
+app.use("api/v1/message" ,messageRoute)
 
 export default app

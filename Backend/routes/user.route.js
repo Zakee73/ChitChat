@@ -3,8 +3,8 @@ import { loginUser, logoutUser, registerUser } from "../controllers/user.control
 
 const router = Router()
 
-router.route("/register" , registerUser)
-router.route("/login" , loginUser)
-router.route("/logout" , logoutUser)
+router.route("/register").post(registerUser)
+router.route("/login").post(loginUser)
+router.route("/logout").post(logoutUser)
 
 export default router

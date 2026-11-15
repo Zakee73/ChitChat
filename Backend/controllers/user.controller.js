@@ -31,7 +31,7 @@ const registerUser = asyncHandler(async(req, res)=>{
 
     const coverImage = await uploadOnCloudinary(coverImageLocalPath)
 
-    if(!avtar){
+    if(!coverImage){
         throw new ApiError(400 , "Avtar file is required")
     }
 })
