@@ -6,10 +6,10 @@ import  jwt from "jsonwebtoken"
 import bcrypt from "bcryptjs"
 import ApiResponse  from "../utils/ApiResponse.js"
 
-const registerUser = asyncHandler(async(req, res)=>{
+const registerUser = asyncHandler(async(req, res)=>{ 
       console.log("BODY" , req.body);
       console.log("FILE" , req.file);
-      
+
     const {username , email , password } = req.body
     // Checking if any field is empty
     if([ username , email , password ].some((field)=>{
