@@ -3,10 +3,13 @@ import ApiError from "../utils/ApiError.js"
 import { User } from "../models/user.model.js"
 import { uploadOnCloudinary } from "../utils/cloudinary.js"
 import  jwt from "jsonwebtoken"
-import { ApiResponse } from "../utils/ApiResponse.js"
+import bcrypt from "bcryptjs"
+import ApiResponse  from "../utils/ApiResponse.js"
 
 const registerUser = asyncHandler(async(req, res)=>{
-
+      console.log("BODY" , req.body);
+      console.log("FILE" , req.file);
+      
     const {username , email , password } = req.body
     // Checking if any field is empty
     if([ username , email , password ].some((field)=>{
@@ -16,9 +19,7 @@ const registerUser = asyncHandler(async(req, res)=>{
     }
      // Finding for a user if already exists
 
-     const existedUser = await User.findByOne({
-        $or : [{ email },{ password }]
-     })
+     const existedUser = await User.findOne({ email })
      if(existedUser){
         throw new ApiError(400 , " User Already exists with this email");
      }
@@ -32,8 +33,21 @@ const registerUser = asyncHandler(async(req, res)=>{
     const coverImage = await uploadOnCloudinary(coverImageLocalPath)
 
     if(!coverImage){
-        throw new ApiError(400 , "Avtar file is required")
+        throw new ApiError(400 , "coverImage file is required")
     }
+    const user = await User.create({
+        username,
+        email,
+        password,
+        coverImage: coverImage.url
+    })
+    const createdUser = await User.findById(user._id).select("-password")
+    if(!createdUser){
+        throw new ApiError(500 , "User not created")
+    }  
+    console.log(createdUser)  
+    return res.status(201).json(
+        new ApiResponse(201 , {user : createdUser} , "User Created Successfully"))
 })
 
 const loginUser = asyncHandler(async(req, res) =>{
@@ -78,4 +92,4 @@ const logoutUser = asyncHandler(async(req,res)=>{
 
 
 
-export{registerUser,loginUser,logoutUser}
+export {registerUser,loginUser,logoutUser}
