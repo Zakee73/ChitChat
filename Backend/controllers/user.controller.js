@@ -7,7 +7,7 @@ import { ApiResponse } from "../utils/ApiResponse.js"
 
 const registerUser = asyncHandler(async(req, res)=>{
 
-    const { username , email , password } = req.body
+    const {username , email , password } = req.body
     // Checking if any field is empty
     if([ username , email , password ].some((field)=>{
         field?.trim() === ""
