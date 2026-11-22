@@ -6,7 +6,7 @@ username : { type : String , required : true },
 // fullName : { type : String , unique : true},
 email : { type : String , required : true , unique : true},
 password : { type : String , required : true},
-coverImage : {type : String , required  :true}, // Cloudinary Url
+coverImage : {type : String , default :""}, // Cloudinary Url
 token : {type : String ,},   
 },{timestamps : true})
 

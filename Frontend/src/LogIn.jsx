@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import useAuthStore from "../store/useAuthStore";
 
 import {
   Card,
@@ -24,6 +25,7 @@ import {
 } from "lucide-react";
 
 function Login() {
+  const setAuthUser = useAuthStore((state) => state.setAuthUser);
   const navigate = useNavigate();
 
   const [showPassword, setShowPassword] = useState(false);
@@ -57,9 +59,7 @@ function Login() {
         }
       );
 
-      const user = response.data.data.user;
-
-      localStorage.setItem("user", JSON.stringify(user));
+      setAuthUser(response.data.data.user);
 
       toast.success(response.data.message || "Login successful!");
 

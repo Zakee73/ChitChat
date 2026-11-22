@@ -88,7 +88,28 @@ const logoutUser = asyncHandler(async(req,res)=>{
     .json( new ApiResponse(201, {} ,`User Logged Out Successfully` ))
 
 })
+ 
+export  const getAllUsers = async (req, res) => {
+  try {
+    const loggedInUserId = req.user._id;
 
+    const users = await User.find({
+      _id: { $ne: loggedInUserId },
+    }).select("username email coverImage createdAt");
+
+    return res.status(200).json({
+      success: true,
+      data: users,
+    });
+  } catch (error) {
+    console.error("Get all users error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch users",
+    });
+  }
+};
 
 
 export {registerUser,loginUser,logoutUser}

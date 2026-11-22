@@ -8,9 +8,11 @@ app.use(cookieParser())
 app.use(express.json())
 app.use(express.urlencoded({extended : true}))
 app.use(cors({
-    origin : process.env.CORS_ORIGIN,
-    credentials : true 
-}))
+    origin: "http://localhost:5173",
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"]
+}));
 
 import userRoute from "./routes/user.route.js"
 import messageRoute from "./routes/message.routes.js"
