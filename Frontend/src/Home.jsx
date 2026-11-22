@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   MessageCircle,
   Search,
@@ -16,127 +16,38 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 
-const initialContacts = [
-  {
-    id: 1,
-    name: "Sanaya Khan",
-    initials: "SK",
-    online: true,
-    lastMessage: "Hey, how are you?",
-    time: "10:42 AM",
-    unread: 2,
-  },
-  {
-    id: 2,
-    name: "Sant Kumar",
-    initials: "SK",
-    online: true,
-    lastMessage: "Let's talk later.",
-    time: "10:30 AM",
-    unread: 0,
-  },
-  {
-    id: 3,
-    name: "Aman Verma",
-    initials: "AV",
-    online: false,
-    lastMessage: "Thanks bro!",
-    time: "Yesterday",
-    unread: 0,
-  },
-  {
-    id: 4,
-    name: "Priya Sharma",
-    initials: "PS",
-    online: true,
-    lastMessage: "That sounds great!",
-    time: "Yesterday",
-    unread: 0,
-  },
-  {
-    id: 5,
-    name: "Rahul Singh",
-    initials: "RS",
-    online: false,
-    lastMessage: "See you tomorrow.",
-    time: "Monday",
-    unread: 0,
-  },
-];
+import { toast } from "sonner";
+import axiosInstance from "./lib/axios";
+import useAuthstore from "./store/useAuthstore.js";
+import useChatStore from "./store/useChatStore.js";
+import useSocketStore from "./store/useSocketStore.js";
 
-const initialMessages = {
-  1: [
-    {
-      id: 1,
-      text: "Hey! How are you?",
-      sender: "them",
-      time: "10:40 AM",
-    },
-    {
-      id: 2,
-      text: "I'm good! What about you?",
-      sender: "me",
-      time: "10:41 AM",
-    },
-    {
-      id: 3,
-      text: "I'm doing great 😊",
-      sender: "them",
-      time: "10:42 AM",
-    },
-  ],
-  2: [
-    {
-      id: 1,
-      text: "Hey, are you free today?",
-      sender: "them",
-      time: "10:25 AM",
-    },
-    {
-      id: 2,
-      text: "Yes, what's up?",
-      sender: "me",
-      time: "10:28 AM",
-    },
-    {
-      id: 3,
-      text: "Let's talk later.",
-      sender: "them",
-      time: "10:30 AM",
-    },
-  ],
-  3: [
-    {
-      id: 1,
-      text: "Thanks bro!",
-      sender: "them",
-      time: "Yesterday",
-    },
-  ],
-  4: [
-    {
-      id: 1,
-      text: "That sounds great!",
-      sender: "them",
-      time: "Yesterday",
-    },
-  ],
-  5: [
-    {
-      id: 1,
-      text: "See you tomorrow.",
-      sender: "them",
-      time: "Monday",
-    },
-  ],
-};
+function getInitials(name = "") {
+  return name
+    .trim()
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0].toUpperCase())
+    .join("") || "?";
+}
 
-function getTime() {
-  return new Date().toLocaleTimeString([], {
+function formatMessageTime(date) {
+  if (!date) return "";
+
+  const parsedDate = new Date(date);
+
+  if (Number.isNaN(parsedDate.getTime())) return "";
+
+  return parsedDate.toLocaleTimeString([], {
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -146,8 +57,12 @@ function ContactAvatar({ contact, size = "h-12 w-12" }) {
   return (
     <div className="relative shrink-0">
       <Avatar className={size}>
+        <AvatarImage
+          src={contact.coverImage || ""}
+          alt={contact.username || "User"}
+        />
         <AvatarFallback className="bg-emerald-100 font-semibold text-emerald-800">
-          {contact.initials}
+          {getInitials(contact.username)}
         </AvatarFallback>
       </Avatar>
 
@@ -159,69 +74,119 @@ function ContactAvatar({ contact, size = "h-12 w-12" }) {
 }
 
 export default function Home() {
-  const [contacts, setContacts] = useState(initialContacts);
-  const [selectedId, setSelectedId] = useState(1);
   const [search, setSearch] = useState("");
   const [message, setMessage] = useState("");
   const [showChat, setShowChat] = useState(false);
-  const [messages, setMessages] = useState(initialMessages);
 
-  const selectedContact = contacts.find(
-    (contact) => contact.id === selectedId
+  // Auth store
+  const authUser = useAuthstore((state) => state.authUser);
+  const logoutUser = useAuthstore((state) => state.logout);
+
+  // Chat store
+  const users = useChatStore((state) => state.users);
+  const selectedUser = useChatStore((state) => state.selectedUser);
+  const messages = useChatStore((state) => state.messages);
+  const isUsersLoading = useChatStore((state) => state.isUsersLoading);
+  const isMessagesLoading = useChatStore(
+    (state) => state.isMessagesLoading
+  );
+  const isSendingMessage = useChatStore(
+    (state) => state.isSendingMessage
   );
 
+  const getUsers = useChatStore((state) => state.getUsers);
+  const setSelectedUser = useChatStore(
+    (state) => state.setSelectedUser
+  );
+  const getMessages = useChatStore((state) => state.getMessages);
+  const sendMessageToBackend = useChatStore(
+    (state) => state.sendMessage
+  );
+
+  // Socket store
+  const onlineUsers = useSocketStore((state) => state.onlineUsers);
+  const connectSocket = useSocketStore(
+    (state) => state.connectSocket
+  );
+  const disconnectSocket = useSocketStore(
+    (state) => state.disconnectSocket
+  );
+
+  // Fetch users and connect socket after login
+  useEffect(() => {
+    if (!authUser?._id) {
+      window.location.replace("/login");
+      return;
+    }
+
+    getUsers();
+    connectSocket(authUser);
+
+    return () => {
+      disconnectSocket();
+    };
+  }, [authUser, getUsers, connectSocket, disconnectSocket]);
+
+  // Update online status for contacts
+  const contacts = useMemo(() => {
+    return users.map((user) => ({
+      ...user,
+      online: onlineUsers.includes(String(user._id)),
+    }));
+  }, [users, onlineUsers]);
+
+  // Search users
   const filteredContacts = useMemo(() => {
-    return contacts.filter((contact) =>
-      contact.name.toLowerCase().includes(search.toLowerCase())
+    const searchText = search.toLowerCase();
+
+    return contacts.filter(
+      (contact) =>
+        contact.username?.toLowerCase().includes(searchText) ||
+        contact.email?.toLowerCase().includes(searchText)
     );
   }, [contacts, search]);
 
-  function openChat(contact) {
-    setSelectedId(contact.id);
+  // Open a real conversation
+  async function openChat(contact) {
+    setSelectedUser(contact);
     setShowChat(true);
+    setMessage("");
 
-    setContacts((previous) =>
-      previous.map((item) =>
-        item.id === contact.id ? { ...item, unread: 0 } : item
-      )
-    );
+    await getMessages(contact._id);
   }
 
-  function sendMessage(event) {
+  // Send message through backend API
+  async function handleSendMessage(event) {
     event.preventDefault();
 
     const text = message.trim();
-    if (!text || !selectedContact) return;
 
-    const newMessage = {
-      id: Date.now(),
-      text,
-      sender: "me",
-      time: getTime(),
-    };
+    if (!text || !selectedUser || isSendingMessage) return;
 
-    setMessages((previous) => ({
-      ...previous,
-      [selectedId]: [
-        ...(previous[selectedId] || []),
-        newMessage,
-      ],
-    }));
+    const sentMessage = await sendMessageToBackend(text);
 
-    setContacts((previous) =>
-      previous.map((contact) =>
-        contact.id === selectedId
-          ? { ...contact, lastMessage: text, time: "Now" }
-          : contact
-      )
-    );
+    if (sentMessage) {
+      setMessage("");
+    }
+  }
 
-    setMessage("");
+  // Logout
+  async function handleLogout() {
+    try {
+      await axiosInstance.post("/users/logout");
+    } catch (error) {
+      console.error("Logout API error:", error);
+    } finally {
+      disconnectSocket();
+      logoutUser();
+      window.location.replace("/login");
+    }
   }
 
   return (
     <main className="h-dvh overflow-hidden bg-slate-950 p-0 text-white sm:p-3 md:p-5">
       <div className="mx-auto flex h-full w-full max-w-7xl overflow-hidden border border-slate-800 bg-slate-900 sm:rounded-2xl">
+
         {/* LEFT SIDEBAR */}
         <aside
           className={`${
@@ -234,6 +199,7 @@ export default function Home() {
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-500 text-white">
                 <MessageCircle size={24} />
               </div>
+
               <div>
                 <h1 className="text-xl font-bold tracking-tight">
                   ChitChat
@@ -259,13 +225,19 @@ export default function Home() {
           {/* Current user */}
           <div className="flex items-center gap-3 px-4 py-4 sm:px-5">
             <Avatar className="h-11 w-11">
+              <AvatarImage
+                src={authUser?.coverImage || ""}
+                alt={authUser?.username || "Your profile"}
+              />
               <AvatarFallback className="bg-indigo-500 font-semibold text-white">
-                ZK
+                {getInitials(authUser?.username)}
               </AvatarFallback>
             </Avatar>
 
             <div className="min-w-0 flex-1">
-              <p className="truncate font-semibold">Your Name</p>
+              <p className="truncate font-semibold">
+                {authUser?.username || "User"}
+              </p>
               <p className="text-xs text-emerald-400">
                 Available
               </p>
@@ -276,9 +248,7 @@ export default function Home() {
               size="icon"
               className="text-slate-400 hover:bg-slate-800 hover:text-white"
               aria-label="Log out"
-              onClick={() => {
-                window.location.href = "/login";
-              }}
+              onClick={handleLogout}
             >
               <LogOut size={18} />
             </Button>
@@ -291,6 +261,7 @@ export default function Home() {
                 size={18}
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
               />
+
               <Input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
@@ -302,54 +273,59 @@ export default function Home() {
 
           <div className="px-5 pb-2">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              Recent chats
+              People
             </p>
           </div>
 
-          {/* Contacts */}
+          {/* Real users from database */}
           <ScrollArea className="min-h-0 flex-1">
             <div className="space-y-1 px-2 pb-3">
-              {filteredContacts.map((contact) => (
-                <button
-                  key={contact.id}
-                  onClick={() => openChat(contact)}
-                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition ${
-                    selectedId === contact.id
-                      ? "bg-emerald-500/10"
-                      : "hover:bg-slate-800"
-                  }`}
-                >
-                  <ContactAvatar contact={contact} />
-
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="truncate text-sm font-semibold text-slate-100">
-                        {contact.name}
-                      </p>
-                      <span className="shrink-0 text-[10px] text-slate-500">
-                        {contact.time}
-                      </span>
-                    </div>
-
-                    <div className="mt-1 flex items-center justify-between gap-2">
-                      <p className="truncate text-xs text-slate-400">
-                        {contact.lastMessage}
-                      </p>
-
-                      {contact.unread > 0 && (
-                        <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500 px-1 text-[10px] font-bold text-white">
-                          {contact.unread}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </button>
-              ))}
-
-              {filteredContacts.length === 0 && (
-                <p className="px-4 py-8 text-center text-sm text-slate-500">
-                  No contacts found.
+              {isUsersLoading ? (
+                <p className="px-4 py-8 text-center text-sm text-slate-400">
+                  Loading users...
                 </p>
+              ) : (
+                <>
+                  {filteredContacts.map((contact) => (
+                    <button
+                      key={contact._id}
+                      onClick={() => openChat(contact)}
+                      className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition ${
+                        selectedUser?._id === contact._id
+                          ? "bg-emerald-500/10"
+                          : "hover:bg-slate-800"
+                      }`}
+                    >
+                      <ContactAvatar contact={contact} />
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="truncate text-sm font-semibold text-slate-100">
+                            {contact.username}
+                          </p>
+
+                          <span className="shrink-0 text-[10px] text-slate-500">
+                            {contact.online ? "Online" : "Offline"}
+                          </span>
+                        </div>
+
+                        <div className="mt-1">
+                          <p className="truncate text-xs text-slate-400">
+                            {contact.email}
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+
+                  {filteredContacts.length === 0 && (
+                    <p className="px-4 py-8 text-center text-sm text-slate-500">
+                      {search
+                        ? "No users found."
+                        : "No other users registered yet."}
+                    </p>
+                  )}
+                </>
               )}
             </div>
           </ScrollArea>
@@ -367,7 +343,7 @@ export default function Home() {
             showChat ? "flex" : "hidden"
           } min-w-0 flex-1 flex-col sm:flex`}
         >
-          {selectedContact ? (
+          {selectedUser ? (
             <>
               {/* Chat header */}
               <header className="flex items-center gap-3 border-b border-slate-800 px-3 py-3 sm:px-5 sm:py-4">
@@ -382,16 +358,22 @@ export default function Home() {
                 </Button>
 
                 <ContactAvatar
-                  contact={selectedContact}
+                  contact={{
+                    ...selectedUser,
+                    online: onlineUsers.includes(
+                      String(selectedUser._id)
+                    ),
+                  }}
                   size="h-10 w-10"
                 />
 
                 <div className="min-w-0 flex-1">
                   <h2 className="truncate text-sm font-semibold sm:text-base">
-                    {selectedContact.name}
+                    {selectedUser.username}
                   </h2>
+
                   <p className="text-xs text-slate-400">
-                    {selectedContact.online ? (
+                    {onlineUsers.includes(String(selectedUser._id)) ? (
                       <span className="text-emerald-400">Online</span>
                     ) : (
                       "Offline"
@@ -408,6 +390,7 @@ export default function Home() {
                   >
                     <Phone size={18} />
                   </Button>
+
                   <Button
                     variant="ghost"
                     size="icon"
@@ -416,6 +399,7 @@ export default function Home() {
                   >
                     <Video size={19} />
                   </Button>
+
                   <Button
                     variant="ghost"
                     size="icon"
@@ -430,49 +414,67 @@ export default function Home() {
               {/* Messages */}
               <ScrollArea className="min-h-0 flex-1">
                 <div className="flex min-h-full flex-col justify-end gap-4 bg-slate-950/40 px-3 py-5 sm:px-6 sm:py-6">
-                  <div className="mb-3 text-center">
-                    <span className="rounded-full bg-slate-800 px-3 py-1 text-[11px] text-slate-400">
-                      Today
-                    </span>
-                  </div>
+                  {isMessagesLoading ? (
+                    <p className="py-8 text-center text-sm text-slate-400">
+                      Loading messages...
+                    </p>
+                  ) : messages.length === 0 ? (
+                    <div className="my-auto text-center">
+                      <MessageCircle
+                        size={32}
+                        className="mx-auto mb-3 text-slate-600"
+                      />
+                      <p className="text-sm text-slate-400">
+                        No messages yet.
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        Send a message to start the conversation.
+                      </p>
+                    </div>
+                  ) : (
+                    messages.map((item) => {
+                      const mine =
+                        String(item.senderId) === String(authUser?._id);
 
-                  {(messages[selectedId] || []).map((item) => {
-                    const mine = item.sender === "me";
-
-                    return (
-                      <div
-                        key={item.id}
-                        className={`flex ${mine ? "justify-end" : "justify-start"}`}
-                      >
+                      return (
                         <div
-                          className={`max-w-[85%] break-words rounded-2xl px-3 py-2 sm:max-w-[75%] sm:px-4 ${
-                            mine
-                              ? "rounded-br-sm bg-emerald-600 text-white"
-                              : "rounded-bl-sm border border-slate-700 bg-slate-800 text-slate-100"
+                          key={item._id}
+                          className={`flex ${
+                            mine ? "justify-end" : "justify-start"
                           }`}
                         >
-                          <p className="whitespace-pre-wrap text-sm leading-relaxed">
-                            {item.text}
-                          </p>
-
                           <div
-                            className={`mt-1 flex items-center justify-end gap-1 text-[10px] ${
-                              mine ? "text-emerald-100" : "text-slate-400"
+                            className={`max-w-[85%] break-words rounded-2xl px-3 py-2 sm:max-w-[75%] sm:px-4 ${
+                              mine
+                                ? "rounded-br-sm bg-emerald-600 text-white"
+                                : "rounded-bl-sm border border-slate-700 bg-slate-800 text-slate-100"
                             }`}
                           >
-                            {item.time}
-                            {mine && <CheckCheck size={14} />}
+                            <p className="whitespace-pre-wrap text-sm leading-relaxed">
+                              {item.message}
+                            </p>
+
+                            <div
+                              className={`mt-1 flex items-center justify-end gap-1 text-[10px] ${
+                                mine
+                                  ? "text-emerald-100"
+                                  : "text-slate-400"
+                              }`}
+                            >
+                              {formatMessageTime(item.createdAt)}
+                              {mine && <CheckCheck size={14} />}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })
+                  )}
                 </div>
               </ScrollArea>
 
               {/* Message composer */}
               <form
-                onSubmit={sendMessage}
+                onSubmit={handleSendMessage}
                 className="border-t border-slate-800 bg-slate-900 p-3 sm:px-5 sm:py-4"
               >
                 <div className="flex items-center gap-2">
@@ -494,6 +496,7 @@ export default function Home() {
                       className="h-11 border-slate-700 bg-slate-800 pr-10 text-white placeholder:text-slate-500 focus-visible:ring-emerald-500"
                       aria-label="Message"
                     />
+
                     <Smile
                       size={19}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500"
@@ -503,7 +506,7 @@ export default function Home() {
                   <Button
                     type="submit"
                     size="icon"
-                    disabled={!message.trim()}
+                    disabled={!message.trim() || isSendingMessage}
                     className="h-11 w-11 shrink-0 bg-emerald-500 text-white hover:bg-emerald-600 disabled:opacity-40"
                     aria-label="Send message"
                   >
@@ -517,9 +520,13 @@ export default function Home() {
               <div className="mb-5 flex h-20 w-20 items-center justify-center rounded-3xl bg-emerald-500/10 text-emerald-400">
                 <MessageCircle size={38} />
               </div>
-              <h2 className="text-xl font-bold">Welcome to ChitChat</h2>
+
+              <h2 className="text-xl font-bold">
+                Welcome to ChitChat
+              </h2>
+
               <p className="mt-2 max-w-sm text-sm leading-6 text-slate-400">
-                Choose a conversation from the sidebar to start chatting.
+                Choose a person from the sidebar to start chatting.
               </p>
             </div>
           )}

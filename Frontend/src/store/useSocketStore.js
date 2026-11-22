@@ -19,7 +19,7 @@ const useSocketStore = create((set, get) => ({
 
     existingSocket?.disconnect();
 
-    const socket = io(SOCKET_URL, {
+    const socket = io(import.meta.env.VITE_SOCKET_URL, {
       query: {
         userId: user._id,
       },

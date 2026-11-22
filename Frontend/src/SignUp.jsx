@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import useAuthStore from "../store/useAuthStore";
+import useAuthStore from "./store/useAuthstore.js";
 
 import {
   Card,

@@ -42,7 +42,7 @@ const useChatStore = create((set, get) => ({
     set({ isMessagesLoading: true });
 
     try {
-      const response = await axiosInstance.get(`/messages/${userId}`);
+      const response = await axiosInstance.get(`/message/${userId}`);
 
       set({
         messages: Array.isArray(response.data)
@@ -59,41 +59,37 @@ const useChatStore = create((set, get) => ({
     }
   },
 
-  sendMessage: async (message) => {
-    const { selectedUser, messages } = get();
+sendMessage: async (message) => {
+  const { selectedUser } = get();
 
-    if (!selectedUser?._id || !message.trim()) return;
+  if (!selectedUser?._id || !message.trim()) return null;
 
-    set({ isSendingMessage: true });
+  set({ isSendingMessage: true });
 
-    try {
-      const response = await axiosInstance.post(
-        `/messages/send/${selectedUser._id}`,
-        { message }
-      );
+  try {
+    const response = await axiosInstance.post(
+      `/message/send/${selectedUser._id}`,
+      { message }
+    );
 
-      const newMessage =
-        response.data.newMessage || response.data.data?.newMessage;
+    const newMessage =
+      response.data.newMessage || response.data.data?.newMessage;
 
-      if (!newMessage) {
-        throw new Error("Message response is missing");
-      }
-
-      set({
-        messages: [...messages, newMessage],
-      });
-
-      return newMessage;
-    } catch (error) {
-      console.error("Send message error:", error);
-      toast.error(
-        error.response?.data?.message || "Failed to send message"
-      );
-      return null;
-    } finally {
-      set({ isSendingMessage: false });
+    if (!newMessage) {
+      throw new Error("Message response is missing");
     }
-  },
+
+    get().addMessage(newMessage);
+
+    return newMessage;
+  } catch (error) {
+    console.error("Send message error:", error);
+    toast.error(error.response?.data?.message || "Failed to send message");
+    return null;
+  } finally {
+    set({ isSendingMessage: false });
+  }
+},
 
   addMessage: (newMessage) => {
     set((state) => {
