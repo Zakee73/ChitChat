@@ -38,7 +38,7 @@ const registerUser = asyncHandler(async(req, res)=>{
         password: hashedPassword, 
         coverImage: coverImage.secure_url
     })
-    console.log("user saving in db" , user)
+    
     const createdUser = await User.findById(user._id).select("-password")
     if(!createdUser){
         throw new ApiError(500 , "User not created")
@@ -73,7 +73,7 @@ if(!token){
 }
 
 const loggedInUser = await User.findById(user._id).select("-password -token")
-console.log("loggedInUser" , loggedInUser)
+
 
 return res
 .status(200)
