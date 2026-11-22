@@ -9,17 +9,16 @@ const isAuthenticated = asyncHandler(async (req ,res,next)=>{
     if(!token){
         throw new ApiError(401,"Toekn not found")
     }
-    const checktoken =  jwt.verify(token , process.env.ACCESS_TOKEN_SECRET)
-      const user = User.findById(checktoken?._id).select("-password")
+    const checktoken = await jwt.verify(token , process.env.ACCESS_TOKEN_SECRET)
+      const user = await User.findById(checktoken?._id).select("-password")
       if(!user){
         throw new ApiError(401 , "Invalid Access Token")
       }
       req.user = user;
       console.log(req.user)
       next();
+    }catch(error){
+        throw new ApiError(401 , error?.message || "Invalid Access Token")
     }
-catch{
-  throw new ApiError(401 , error?.message || "Invalid Access Token")
-}
 })
  export default isAuthenticated

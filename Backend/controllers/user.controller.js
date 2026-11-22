@@ -18,29 +18,24 @@ const registerUser = asyncHandler(async(req, res)=>{
      // Finding for a user if already exists
 
      const existedUser = await User.findOne({ email })
-     console.log(existedUser)
+   
      if(existedUser){
         throw new ApiError(400 , " User Already exists with this email");
      }
      
- 
-      let coverImageLocalPath;
-    if (req.file && Array.isArray(req.file.coverImage) && req.file.coverImage.length > 0) {
-        coverImageLocalPath = req.file.coverImage[0].path
-    }
-    console.log(coverImageLocalPath)
+     const coverImageLocalPath = req.file?.path;
+    //  console.log("Image path:", coverImageLocalPath);
+     const coverImage = await uploadOnCloudinary(coverImageLocalPath);
+    //  console.log("Cloudinary response:", coverImage);
 
-    const coverImage = await uploadOnCloudinary(coverImageLocalPath)
-    console.log("coverImage cloudinay url" , coverImage)
-
-    if(!coverImage){
-        throw new ApiError(400 , "coverImage file is required")
-    }
+    if (!coverImage) {
+    throw new ApiError(400, "Cover image upload failed");
+}
     const hashedPassword = await bcrypt.hash(password , 10)
     const user = await User.create({
         username,
         email,
-        password: hashedPassword,
+        password: hashedPassword, 
         coverImage: coverImage.secure_url
     })
     console.log("user saving in db" , user)
@@ -54,7 +49,7 @@ const registerUser = asyncHandler(async(req, res)=>{
 })
 
 const loginUser = asyncHandler(async(req, res) =>{
- 
+  
     const {email , password} = req.body
     // Checking whether user exists or not
     const user = await User.findOne({email})
@@ -78,6 +73,7 @@ if(!token){
 }
 
 const loggedInUser = await User.findById(user._id).select("-password -token")
+console.log("loggedInUser" , loggedInUser)
 
 return res
 .status(200)

@@ -4,7 +4,7 @@ import { getReceiverSocketId, io } from "../socket/socket.js";
 
 export const sendMessage = async (req,res) => {
     try {
-        const senderId = req.id;
+        const senderId = req.user._id;
         const receiverId = req.params.id;
         const {message} = req.body;
 
@@ -44,7 +44,7 @@ export const sendMessage = async (req,res) => {
 export const getMessage = async (req,res) => {
     try {
         const receiverId = req.params.id;
-        const senderId = req.id;
+        const senderId = req.user._id;
         const conversation = await Conversation.findOne({
             participants:{$all : [senderId, receiverId]}
         }).populate("messages"); 
