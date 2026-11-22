@@ -1,12 +1,15 @@
 import SignUp from "./SignUp";
 import LogIn from "./LogIn";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "sonner";
 
 import "./App.css";
 import Home from "./Home";
+import useAuthStore from "./store/useAuthstore.js";
 
 function App() {
+  const authUser = useAuthStore((state) => state.authUser);
+
   return (
     <BrowserRouter>
       <Toaster
@@ -18,9 +21,22 @@ function App() {
       />
 
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/signup" element={<SignUp />} />
-        <Route path="/login" element={<LogIn />} />
+        <Route
+          path="/"
+          element={authUser ? <Home /> : <Navigate to="/login" replace />}
+        />
+
+        <Route
+          path="/login"
+          element={authUser ? <Navigate to="/" replace /> : <LogIn />}
+        />
+
+        <Route
+          path="/signup"
+          element={authUser ? <Navigate to="/" replace /> : <SignUp />}
+        />
+
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );
