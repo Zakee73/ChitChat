@@ -7,45 +7,48 @@ import bcrypt from "bcryptjs"
 import ApiResponse  from "../utils/ApiResponse.js"
 
 const registerUser = asyncHandler(async(req, res)=>{ 
-      console.log("BODY" , req.body);
-      console.log("FILE" , req.file);
-
+    
     const {username , email , password } = req.body
     // Checking if any field is empty
-    if([ username , email , password ].some((field)=>{
-        field?.trim() === ""
+    if([ username , email , password ].some((field)=>{ 
+       !field ||  field?.trim() === ""
     })){
         throw new ApiError(401 ,"Please enter email and password")
     }
      // Finding for a user if already exists
 
      const existedUser = await User.findOne({ email })
+     console.log(existedUser)
      if(existedUser){
         throw new ApiError(400 , " User Already exists with this email");
      }
      
  
       let coverImageLocalPath;
-    if (req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 0) {
-        coverImageLocalPath = req.files.coverImage[0].path
+    if (req.file && Array.isArray(req.file.coverImage) && req.file.coverImage.length > 0) {
+        coverImageLocalPath = req.file.coverImage[0].path
     }
+    console.log(coverImageLocalPath)
 
     const coverImage = await uploadOnCloudinary(coverImageLocalPath)
+    console.log("coverImage cloudinay url" , coverImage)
 
     if(!coverImage){
         throw new ApiError(400 , "coverImage file is required")
     }
+    const hashedPassword = await bcrypt.hash(password , 10)
     const user = await User.create({
         username,
         email,
-        password,
-        coverImage: coverImage.url
+        password: hashedPassword,
+        coverImage: coverImage.secure_url
     })
+    console.log("user saving in db" , user)
     const createdUser = await User.findById(user._id).select("-password")
     if(!createdUser){
         throw new ApiError(500 , "User not created")
     }  
-    console.log(createdUser)  
+     
     return res.status(201).json(
         new ApiResponse(201 , {user : createdUser} , "User Created Successfully"))
 })
