@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom"; 
 import {
   MessageCircle,
   Search,
@@ -83,6 +84,7 @@ export default function Home() {
   const logoutUser = useAuthstore((state) => state.logout);
 
   // Chat store
+  const navigate = useNavigate();
   const users = useChatStore((state) => state.users);
   const selectedUser = useChatStore((state) => state.selectedUser);
   const messages = useChatStore((state) => state.messages);
@@ -172,16 +174,16 @@ export default function Home() {
 
   // Logout
   async function handleLogout() {
-    try {
-      await axiosInstance.post("/users/logout");
-    } catch (error) {
-      console.error("Logout API error:", error);
-    } finally {
-      disconnectSocket();
-      logoutUser();
-      window.location.replace("/login");
-    }
+  try {
+    await axiosInstance.post("/users/logout");
+  } catch (error) {
+    console.error("Logout API error:", error);
+  } finally {
+    disconnectSocket();
+    logoutUser();
+    navigate("/login", { replace: true });
   }
+      }
 
   return (
     <main className="h-dvh overflow-hidden bg-slate-950 p-0 text-white sm:p-3 md:p-5">
