@@ -77,14 +77,14 @@ const loggedInUser = await User.findById(user._id).select("-password -token")
 
 return res
 .status(200)
-.cookie("token", token , {httpOnly : true, secure : process.env.NODE_ENV === "production"})
+.cookie("token", token , {httpOnly : true, secure : "true",sameSite:"none"})
 .json(new ApiResponse(200 , {user: loggedInUser} , "User loggedin Successfully"))
 })
 
 const logoutUser = asyncHandler(async(req,res)=>{
      
     return res
-    .clearCookie("token" , {httpOnly : true, secure : process.env.NODE_ENV === "production"})
+    .clearCookie("token" , {httpOnly : true, secure : "true",sameSite:"none"})
     .json( new ApiResponse(201, {} ,`User Logged Out Successfully` ))
 
 })
