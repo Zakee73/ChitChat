@@ -42,7 +42,7 @@ const useSocketStore = create((set, get) => ({
   },
 
   disconnectSocket: () => {
-    const socket = get().socket;
+    const socket = get().socket; 
 
     if (socket) {
       socket.removeAllListeners();

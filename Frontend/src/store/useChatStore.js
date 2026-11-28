@@ -102,7 +102,7 @@ const useChatStore = create((set, get) => ({
 
       return { messages: [...state.messages, newMessage] };
     });
-  },
+  }, 
 
   clearChat: () => {
     set({ selectedUser: null, messages: [] });

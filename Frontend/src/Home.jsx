@@ -58,7 +58,7 @@ function ContactAvatar({ contact, size = "h-12 w-12" }) {
   return (
     <div className="relative shrink-0">
       <Avatar className={size}>
-        <AvatarImage 
+        <AvatarImage  
           src={contact.coverImage || ""}
           alt={contact.username || "User"}
         />
