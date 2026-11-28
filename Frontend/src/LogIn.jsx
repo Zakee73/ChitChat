@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import axios from "axios";
+import axiosInstance from "./lib/axios.js";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -51,12 +51,7 @@ function Login() {
     setLoading(true);
 
     try {
-      const response = await axios.post(
-        "http://localhost:8081/api/v1/users/login",
-        form,
-        {
-          withCredentials: true,
-        }
+    const response = await axiosInstance.post("/users/login", form);
       );
 
       setAuthUser(response.data.data.user);
