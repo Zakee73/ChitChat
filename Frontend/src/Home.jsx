@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState,useRef } from "react";
 import {
   MessageCircle,
   Search,
@@ -13,7 +13,7 @@ import {
   LogOut,
   Plus,
 } from "lucide-react";
-
+import EmojiPicker from "emoji-picker-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -77,7 +77,9 @@ export default function Home() {
   const [search, setSearch] = useState("");
   const [message, setMessage] = useState("");
   const [showChat, setShowChat] = useState(false);
-
+const [selectedFile, setSelectedFile] = useState(null);
+const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+const fileInputRef = useRef(null);
   // Auth store
   const authUser = useAuthstore((state) => state.authUser);
   const logoutUser = useAuthstore((state) => state.logout);
@@ -156,19 +158,28 @@ export default function Home() {
   }
 
   // Send message through backend API
-  async function handleSendMessage(event) {
-    event.preventDefault();
+ async function handleSendMessage(event) {
+  event.preventDefault();
 
-    const text = message.trim();
+  if ((!message.trim() && !selectedFile) || !selectedUser || isSendingMessage) {
+    return;
+  }
 
-    if (!text || !selectedUser || isSendingMessage) return;
+  const sentMessage = await sendMessageToBackend({
+    message,
+    file: selectedFile,
+  });
 
-    const sentMessage = await sendMessageToBackend(text);
+  if (sentMessage) {
+    setMessage("");
+    setSelectedFile(null);
+    setShowEmojiPicker(false);
 
-    if (sentMessage) {
-      setMessage("");
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
     }
   }
+}
 
   // Logout
   async function handleLogout() {
@@ -450,9 +461,43 @@ export default function Home() {
                                 : "rounded-bl-sm border border-slate-700 bg-slate-800 text-slate-100"
                             }`}
                           >
-                            <p className="whitespace-pre-wrap text-sm leading-relaxed">
-                              {item.message}
-                            </p>
+                            {item.messageType === "image" && (
+  <a href={item.attachment.url} target="_blank" rel="noreferrer">
+    <img
+      src={item.attachment.url}
+      alt={item.attachment.fileName || "Shared image"}
+      className="mb-2 max-h-72 max-w-full rounded-lg object-contain"
+    />
+  </a>
+)}
+
+{item.messageType === "video" && (
+  <video
+    src={item.attachment.url}
+    controls
+    className="mb-2 max-h-72 max-w-full rounded-lg"
+  />
+)}
+
+{item.messageType === "file" && (
+  <a
+    href={item.attachment.url}
+    target="_blank"
+    rel="noreferrer"
+    className="mb-2 flex items-center gap-2 rounded-lg bg-black/20 p-3 underline"
+  >
+    <Paperclip size={18} />
+    <span className="break-all text-sm">
+      {item.attachment.fileName || "Download file"}
+    </span>
+  </a>
+)}
+
+{item.message && (
+  <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">
+    {item.message}
+  </p>
+)}
 
                             <div
                               className={`mt-1 flex items-center justify-end gap-1 text-[10px] ${
@@ -473,47 +518,100 @@ export default function Home() {
               </ScrollArea>
 
               {/* Message composer */}
-              <form
-                onSubmit={handleSendMessage}
-                className="border-t border-slate-800 bg-slate-900 p-3 sm:px-5 sm:py-4"
-              >
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="hidden shrink-0 text-slate-400 hover:bg-slate-800 hover:text-white sm:inline-flex"
-                    aria-label="Attach file"
-                  >
-                    <Paperclip size={20} />
-                  </Button>
+              {/* Message composer */}
+<form
+  onSubmit={handleSendMessage}
+  className="relative border-t border-slate-800 bg-slate-900 p-3 sm:px-5 sm:py-4"
+>
+  {showEmojiPicker && (
+    <div className="absolute bottom-20 left-3 z-50">
+      <EmojiPicker
+        onEmojiClick={(emojiData) =>
+          setMessage((prev) => prev + emojiData.emoji)
+        }
+        theme="dark"
+        height={350}
+      />
+    </div>
+  )}
 
-                  <div className="relative min-w-0 flex-1">
-                    <Input
-                      value={message}
-                      onChange={(event) => setMessage(event.target.value)}
-                      placeholder="Type a message..."
-                      className="h-11 border-slate-700 bg-slate-800 pr-10 text-white placeholder:text-slate-500 focus-visible:ring-emerald-500"
-                      aria-label="Message"
-                    />
+  {selectedFile && (
+    <div className="mb-3 flex items-center justify-between rounded-lg bg-slate-800 p-3">
+      <p className="truncate text-sm text-white">
+        {selectedFile.name}
+      </p>
+      <button
+        type="button"
+        onClick={() => {
+          setSelectedFile(null);
+          if (fileInputRef.current) fileInputRef.current.value = "";
+        }}
+        className="ml-3 text-red-400"
+      >
+        Remove
+      </button>
+    </div>
+  )}
 
-                    <Smile
-                      size={19}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500"
-                    />
-                  </div>
+  <input
+    ref={fileInputRef}
+    type="file"
+    hidden
+    accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime,application/pdf"
+    onChange={(event) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
 
-                  <Button
-                    type="submit"
-                    size="icon"
-                    disabled={!message.trim() || isSendingMessage}
-                    className="h-11 w-11 shrink-0 bg-emerald-500 text-white hover:bg-emerald-600 disabled:opacity-40"
-                    aria-label="Send message"
-                  >
-                    <Send size={18} />
-                  </Button>
-                </div>
-              </form>
+      if (file.size > 50 * 1024 * 1024) {
+        toast.error("Maximum attachment size is 50 MB");
+        event.target.value = "";
+        return;
+      }
+
+      setSelectedFile(file);
+    }}
+  />
+
+  <div className="flex items-center gap-2">
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      onClick={() => fileInputRef.current?.click()}
+      aria-label="Attach file"
+    >
+      <Paperclip size={20} />
+    </Button>
+
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      onClick={() => setShowEmojiPicker((prev) => !prev)}
+      aria-label="Choose emoji"
+    >
+      <Smile size={20} />
+    </Button>
+
+    <Input
+      value={message}
+      onChange={(event) => setMessage(event.target.value)}
+      placeholder="Type a message..."
+      className="h-11 min-w-0 border-slate-700 bg-slate-800 text-white placeholder:text-slate-500"
+      aria-label="Message"
+    />
+
+    <Button
+      type="submit"
+      size="icon"
+      disabled={(!message.trim() && !selectedFile) || isSendingMessage}
+      className="h-11 w-11 shrink-0 bg-emerald-500 text-white hover:bg-emerald-600 disabled:opacity-40"
+      aria-label="Send message"
+    >
+      <Send size={18} />
+    </Button>
+  </div>
+</form>
             </>
           ) : (
             <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">

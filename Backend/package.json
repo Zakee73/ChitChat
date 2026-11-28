@@ -19,6 +19,7 @@
     "cors": "^2.8.6",
     "datauri": "^1.1.0",
     "dotenv": "^17.4.2",
+    "emoji-picker": "^0.0.7",
     "express": "^5.3.0",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.7.0",

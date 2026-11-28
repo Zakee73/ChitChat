@@ -21,19 +21,14 @@ const useChatStore = create((set, get) => ({
       });
     } catch (error) {
       console.error("Get users error:", error);
-      toast.error(
-        error.response?.data?.message || "Failed to load users"
-      );
+      toast.error(error.response?.data?.message || "Failed to load users");
     } finally {
       set({ isUsersLoading: false });
     }
   },
 
   setSelectedUser: (user) => {
-    set({
-      selectedUser: user,
-      messages: [],
-    });
+    set({ selectedUser: user, messages: [] });
   },
 
   getMessages: async (userId) => {
@@ -51,45 +46,51 @@ const useChatStore = create((set, get) => ({
       });
     } catch (error) {
       console.error("Get messages error:", error);
-      toast.error(
-        error.response?.data?.message || "Failed to load messages"
-      );
+      toast.error(error.response?.data?.message || "Failed to load messages");
     } finally {
       set({ isMessagesLoading: false });
     }
   },
 
-sendMessage: async (message) => {
-  const { selectedUser } = get();
+  sendMessage: async ({ message = "", file = null }) => {
+    const { selectedUser } = get();
 
-  if (!selectedUser?._id || !message.trim()) return null;
+    if (!selectedUser?._id || (!message.trim() && !file)) return null;
 
-  set({ isSendingMessage: true });
+    set({ isSendingMessage: true });
 
-  try {
-    const response = await axiosInstance.post(
-      `/message/send/${selectedUser._id}`,
-      { message }
-    );
+    try {
+      const formData = new FormData();
 
-    const newMessage =
-      response.data.newMessage || response.data.data?.newMessage;
+      if (message.trim()) {
+        formData.append("message", message.trim());
+      }
 
-    if (!newMessage) {
-      throw new Error("Message response is missing");
+      if (file) {
+        formData.append("attachment", file);
+      }
+
+      const response = await axiosInstance.post(
+        `/message/send/${selectedUser._id}`,
+        formData
+      );
+
+      const newMessage = response.data.newMessage;
+
+      if (!newMessage) {
+        throw new Error("Message response is missing");
+      }
+
+      get().addMessage(newMessage);
+      return newMessage;
+    } catch (error) {
+      console.error("Send message error:", error);
+      toast.error(error.response?.data?.message || "Failed to send message");
+      return null;
+    } finally {
+      set({ isSendingMessage: false });
     }
-
-    get().addMessage(newMessage);
-
-    return newMessage;
-  } catch (error) {
-    console.error("Send message error:", error);
-    toast.error(error.response?.data?.message || "Failed to send message");
-    return null;
-  } finally {
-    set({ isSendingMessage: false });
-  }
-},
+  },
 
   addMessage: (newMessage) => {
     set((state) => {
@@ -99,17 +100,12 @@ sendMessage: async (message) => {
 
       if (alreadyExists) return state;
 
-      return {
-        messages: [...state.messages, newMessage],
-      };
+      return { messages: [...state.messages, newMessage] };
     });
   },
 
   clearChat: () => {
-    set({
-      selectedUser: null,
-      messages: [],
-    });
+    set({ selectedUser: null, messages: [] });
   },
 }));
 

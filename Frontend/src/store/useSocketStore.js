@@ -2,7 +2,8 @@ import { create } from "zustand";
 import { io } from "socket.io-client";
 import useChatStore from "./useChatStore";
 
-const SOCKET_URL = "http://localhost:8081";
+const SOCKET_URL =
+  import.meta.env.VITE_SOCKET_URL || "http://localhost:8081";
 
 const useSocketStore = create((set, get) => ({
   socket: null,
@@ -13,16 +14,12 @@ const useSocketStore = create((set, get) => ({
 
     const existingSocket = get().socket;
 
-    if (existingSocket?.connected) {
-      return;
-    }
+    if (existingSocket?.connected) return;
 
     existingSocket?.disconnect();
 
-    const socket = io(import.meta.env.VITE_SOCKET_URL, {
-      query: {
-        userId: user._id,
-      },
+    const socket = io(SOCKET_URL, {
+      query: { userId: user._id },
       withCredentials: true,
     });
 
@@ -52,10 +49,7 @@ const useSocketStore = create((set, get) => ({
       socket.disconnect();
     }
 
-    set({
-      socket: null,
-      onlineUsers: [],
-    });
+    set({ socket: null, onlineUsers: [] });
   },
 }));
 
