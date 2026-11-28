@@ -52,7 +52,7 @@ function Login() {
 
     try {
     const response = await axiosInstance.post("/users/login", form);
-      );
+      
 
       setAuthUser(response.data.data.user);
 
