@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState,useRef } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   MessageCircle,
   Search,
@@ -57,7 +58,7 @@ function ContactAvatar({ contact, size = "h-12 w-12" }) {
   return (
     <div className="relative shrink-0">
       <Avatar className={size}>
-        <AvatarImage
+        <AvatarImage 
           src={contact.coverImage || ""}
           alt={contact.username || "User"}
         />
@@ -85,6 +86,7 @@ const fileInputRef = useRef(null);
   const logoutUser = useAuthstore((state) => state.logout);
 
   // Chat store
+  const navigate = useNavigate();
   const users = useChatStore((state) => state.users);
   const selectedUser = useChatStore((state) => state.selectedUser);
   const messages = useChatStore((state) => state.messages);
@@ -183,16 +185,16 @@ const fileInputRef = useRef(null);
 
   // Logout
   async function handleLogout() {
-    try {
-      await axiosInstance.post("/users/logout");
-    } catch (error) {
-      console.error("Logout API error:", error);
-    } finally {
-      disconnectSocket();
-      logoutUser();
-      window.location.replace("/login");
-    }
+  try {
+    await axiosInstance.post("/users/logout");
+  } catch (error) {
+    console.error("Logout API error:", error);
+  } finally {
+    disconnectSocket();
+    logoutUser();
+    navigate("/login", { replace: true });
   }
+      }
 
   return (
     <main className="h-dvh overflow-hidden bg-slate-950 p-0 text-white sm:p-3 md:p-5">

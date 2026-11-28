@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
-
+import axiosInstance from "./lib/axios.js";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -89,13 +89,9 @@ function Signup() {
         formData.append("coverImage", profileImage);
       }
 
-      const response = await axios.post(
-        "http://localhost:8081/api/v1/users/register",
-        formData,
-        {
-          withCredentials: true,
-        }
-      );
+      const response = await axiosInstance.post(
+  "/users/register",
+  formData   );
 
       toast.success(
         response.data.message || "Account created successfully!"
